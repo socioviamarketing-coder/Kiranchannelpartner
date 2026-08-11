@@ -290,13 +290,22 @@
     .back-to-top.visible { opacity:1; pointer-events:all; }
     .back-to-top:hover { transform:translateY(-3px); background:var(--amber-dark); }
 
-    .mobile-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1999; opacity:0; transition:opacity 0.4s; }
-    .mobile-overlay.open { opacity:1; display:block; }
-    .mobile-menu { display:none; position:fixed; top:0; right:-100%; width:280px; height:100vh; background:var(--white); z-index:2000; padding:80px 32px 32px; box-shadow:var(--shadow-lg); transition:right 0.4s ease; }
-    .mobile-menu.open { right:0; display:block; }
+    .mobile-overlay {
+      position:fixed; top:0; left:0; width:100%; height:100%;
+      background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); z-index:1999;
+      opacity:0; pointer-events:none; transition:opacity 0.35s ease;
+    }
+    .mobile-overlay.open { opacity:1; pointer-events:auto; }
+    .mobile-menu {
+      position:fixed; top:0; right:-100%; width:280px; max-width:82vw; height:100vh; height:100dvh;
+      background:var(--white); z-index:2000; padding:80px 28px 32px;
+      box-shadow:var(--shadow-lg); transition:right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow-y:auto;
+    }
+    .mobile-menu.open { right:0; }
     .mobile-menu ul { list-style:none; display:flex; flex-direction:column; gap:24px; }
-    .mobile-menu a { text-decoration:none; color:var(--navy); font-size:1.05rem; font-weight:500; }
-    .mobile-close { position:absolute; top:20px; right:20px; background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--navy); }
+    .mobile-menu a { text-decoration:none; color:var(--navy); font-size:1.05rem; font-weight:500; display:block; padding:8px 0; }
+    .mobile-close { position:absolute; top:20px; right:20px; background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--navy); padding:8px; }
 
     @media (max-width:1024px) {
       .about-grid { gap:40px; }
@@ -306,7 +315,6 @@
     @media (max-width:768px) {
       .nav-links { display:none; }
       .hamburger { display:flex; }
-      .mobile-menu, .mobile-overlay { display:block; }
       .hero-inner { grid-template-columns:1fr; }
       .hero-visual { display:none; }
       .hero-content { padding:100px 0 60px; }
@@ -678,7 +686,35 @@
 
       <div class="contact-form-wrap">
         <h3>Book a Free Site Visit</h3>
-        <form id="siteVisitForm" onsubmit="handleFormSubmit(event)">
+        
+        <!-- Inline Success Alert (Initially Hidden) -->
+        <div id="formSuccessCard" style="display:none; background:#E8F5E9; border:1px solid #A5D6A7; padding:20px; border-radius:12px; margin-bottom:20px;">
+          <div style="display:flex; align-items:center; gap:12px; color:#2E7D32; font-weight:700; font-size:1.1rem; margin-bottom:8px;">
+            <span style="font-size:1.5rem;">✓</span> Site Visit Request Confirmed!
+          </div>
+          <p style="font-size:0.9rem; color:#1B5E20; margin-bottom:14px; line-height:1.6;" id="successCardMsg">
+            Thank you! Your details have been submitted successfully to Kiran Channel Partner.
+          </p>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button type="button" onclick="resetFormCard()" style="background:#2E7D32; color:white; border:none; padding:10px 20px; border-radius:50px; font-size:0.85rem; font-weight:600; cursor:pointer;">Book Another Visit</button>
+            <a id="successWaBtn" href="#" target="_blank" rel="noopener" style="background:#25D366; color:white; text-decoration:none; padding:10px 20px; border-radius:50px; font-size:0.85rem; font-weight:600; display:inline-flex; align-items:center; gap:6px;">
+              💬 Also Chat on WhatsApp
+            </a>
+          </div>
+        </div>
+
+        <!-- Hidden Iframe to guarantee CORS-free background POST to Google Apps Script -->
+        <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
+
+        <form id="siteVisitForm" action="https://script.google.com/macros/s/AKfycbxIalWRPhaGCLzkOYRcopX1eBN9Eu0J2MXg1g9KFYHWFvwGAaZ5QrG6pJ-REQJjGeVP/exec" method="POST" target="hidden_iframe" onsubmit="return handleFormSubmit(event)">
+          <!-- Hidden compatibility fields for Google Apps Script -->
+          <input type="hidden" name="timestamp" id="hiddenTimestamp" />
+          <input type="hidden" name="name" id="hiddenName" />
+          <input type="hidden" name="phone" id="hiddenPhone" />
+          <input type="hidden" name="mobile" id="hiddenMobile" />
+          <input type="hidden" name="location" id="hiddenLocation" />
+          <input type="hidden" name="message" id="hiddenMessage" />
+
           <div class="form-row">
             <div class="form-group">
               <label for="fullName">Full Name *</label>
@@ -705,8 +741,20 @@
             <textarea id="reqOrDate" name="reqOrDate" required placeholder="e.g. Looking for a 3 BHK villa / Preferred site visit date: 15th Oct"></textarea>
           </div>
 
-          <button type="submit" class="form-submit">Confirm Site Visit Request →</button>
+          <div style="display:flex; flex-direction:column; gap:12px;">
+            <button type="submit" class="form-submit" id="submitBtn">Confirm Site Visit Request →</button>
+            <button type="button" onclick="sendViaWhatsAppDirect()" style="width:100%; padding:12px; background:#25D366; color:white; border:none; border-radius:50px; font-family:inherit; font-size:0.9rem; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all var(--tr);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.892 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.572-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+              Or Book Instantly via WhatsApp
+            </button>
+          </div>
         </form>
+
+        <div style="margin-top:16px; text-align:center;">
+          <button type="button" onclick="openModal('gasModal')" style="background:none; border:none; color:var(--muted); font-size:0.78rem; text-decoration:underline; cursor:pointer;">
+            ⚙️ Having trouble with Google Sheets connection? Click for setup guide
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -905,6 +953,43 @@
   </div>
 </div>
 
+<!-- Modal: Google Apps Script Setup Guide -->
+<div class="modal-overlay" id="gasModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 class="modal-title">Google Apps Script Setup Guide</h3>
+      <button class="modal-close" onclick="closeModal('gasModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>If form responses are not appearing in your Google Sheet, verify that your Apps Script project has this exact code deployed:</p>
+      <h4>1. Correct Google Apps Script Code (`Code.gs`)</h4>
+      <pre style="background:#1B2A4A; color:#F0A83D; padding:14px; border-radius:8px; font-size:0.82rem; overflow-x:auto; font-family:monospace; margin-bottom:16px;">
+function doPost(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var p = e.parameter;
+  
+  sheet.appendRow([
+    p.timestamp || new Date(),
+    p.fullName || p.name || "",
+    p.phoneNum || p.phone || p.mobile || "",
+    p.preferredLoc || p.location || "",
+    p.reqOrDate || p.message || p.requirements || ""
+  ]);
+  
+  return ContentService.createTextOutput("Success").setMimeType(ContentService.MimeType.TEXT);
+}
+      </pre>
+      <h4>2. Mandatory Deployment Settings</h4>
+      <ul>
+        <li>Click <strong>Deploy → New deployment</strong> in Google Apps Script.</li>
+        <li>Select type: <strong>Web App</strong>.</li>
+        <li>Execute as: <strong>Me (your email)</strong>.</li>
+        <li>Who has access: <strong>Anyone</strong> (Crucial for receiving submissions).</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
 <script>
   // Dynamic Year
   document.getElementById('currentYear').textContent = new Date().getFullYear();
@@ -939,13 +1024,19 @@
   const mobileLinks = document.querySelectorAll('.mobile-link');
 
   function openMobileNav() {
-    mobileMenu.classList.add('open');
-    mobileOverlay.classList.add('open');
+    if (mobileMenu && mobileOverlay) {
+      mobileMenu.classList.add('open');
+      mobileOverlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
   }
 
   function closeMobileNav() {
-    mobileMenu.classList.remove('open');
-    mobileOverlay.classList.remove('open');
+    if (mobileMenu && mobileOverlay) {
+      mobileMenu.classList.remove('open');
+      mobileOverlay.classList.remove('open');
+      document.body.style.overflow = '';
+    }
   }
 
   if (menuToggle) menuToggle.addEventListener('click', openMobileNav);
@@ -964,32 +1055,48 @@
     }
   }
 
-  // Form Submission Handler & Custom Toast
-  async function handleFormSubmit(e) {
-    e.preventDefault();
-    const submitBtn = e.target.querySelector('button[type="submit"]');
-    const originalBtnText = submitBtn.textContent;
-    submitBtn.textContent = "Submitting...";
-    submitBtn.disabled = true;
+  function sendViaWhatsAppDirect() {
+    const name = document.getElementById('fullName').value || 'A Client';
+    const phone = document.getElementById('phoneNum').value || 'Not provided';
+    const loc = document.getElementById('preferredLoc').value || 'Not selected';
+    const req = document.getElementById('reqOrDate').value || 'Site visit inquiry';
 
+    const text = encodeURIComponent(`Hello Kiran Channel Partner,\n\nI would like to book a site visit!\n\n📌 Name: ${name}\n📞 Phone: ${phone}\n📍 Preferred Location: ${loc}\n📝 Requirement/Date: ${req}`);
+    window.open(`https://wa.me/15553680842?text=${text}`, '_blank');
+  }
+
+  function resetFormCard() {
+    document.getElementById('siteVisitForm').style.display = 'block';
+    document.getElementById('formSuccessCard').style.display = 'none';
+    document.getElementById('siteVisitForm').reset();
+  }
+
+  // Form Submission Handler & Custom Toast
+  function handleFormSubmit(e) {
     const name = document.getElementById('fullName').value;
     const phone = document.getElementById('phoneNum').value;
     const loc = document.getElementById('preferredLoc').value;
     const reqOrDate = document.getElementById('reqOrDate').value;
+    const timeStr = new Date().toLocaleString();
 
+    // Populate hidden fallback input values for maximum Google Apps Script compatibility
+    document.getElementById('hiddenTimestamp').value = timeStr;
+    document.getElementById('hiddenName').value = name;
+    document.getElementById('hiddenPhone').value = phone;
+    document.getElementById('hiddenMobile').value = phone;
+    document.getElementById('hiddenLocation').value = loc;
+    document.getElementById('hiddenMessage').value = reqOrDate;
+
+    // Secondary background fetch call
     const googleAppScriptUrl = 'https://script.google.com/macros/s/AKfycbxIalWRPhaGCLzkOYRcopX1eBN9Eu0J2MXg1g9KFYHWFvwGAaZ5QrG6pJ-REQJjGeVP/exec';
-
+    
     try {
       const params = new URLSearchParams();
-      
-      // Exact field keys matching form IDs
       params.append('fullName', name);
       params.append('phoneNum', phone);
       params.append('preferredLoc', loc);
       params.append('reqOrDate', reqOrDate);
-      params.append('timestamp', new Date().toLocaleString());
-
-      // Common parameter aliases for Google Apps Script compatibility
+      params.append('timestamp', timeStr);
       params.append('name', name);
       params.append('phone', phone);
       params.append('mobile', phone);
@@ -998,25 +1105,43 @@
       params.append('requirements', reqOrDate);
       params.append('message', reqOrDate);
 
-      await fetch(googleAppScriptUrl, {
+      fetch(googleAppScriptUrl, {
         method: 'POST',
         mode: 'no-cors',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: params
-      });
-
-      showToast(`Thank you ${name}! We have received your site visit request for ${loc}. Our team will call you shortly on ${phone}.`);
-      document.getElementById('siteVisitForm').reset();
+      }).catch(err => console.log('Fetch background log:', err));
     } catch (err) {
-      console.error('Submission error:', err);
-      showToast(`Thank you ${name}! We have received your request and will contact you shortly.`);
-      document.getElementById('siteVisitForm').reset();
-    } finally {
-      submitBtn.textContent = originalBtnText;
-      submitBtn.disabled = false;
+      console.log('Fetch init log:', err);
     }
+
+    // Immediate UI updates
+    const submitBtn = document.getElementById('submitBtn');
+    if (submitBtn) submitBtn.textContent = 'Submitting...';
+
+    setTimeout(() => {
+      document.getElementById('siteVisitForm').style.display = 'none';
+      const successCard = document.getElementById('formSuccessCard');
+      const successMsg = document.getElementById('successCardMsg');
+      const successWaBtn = document.getElementById('successWaBtn');
+
+      if (successMsg) {
+        successMsg.innerHTML = `<strong>Thank you ${name}!</strong> Your site visit request for <strong>${loc}</strong> has been submitted.<br/>Our team will call you at <strong>${phone}</strong> shortly.`;
+      }
+
+      if (successWaBtn) {
+        const text = encodeURIComponent(`Hi Kiran Channel Partner, I just submitted a site visit request on your website for ${loc}. (Name: ${name}, Phone: ${phone})`);
+        successWaBtn.href = `https://wa.me/15553680842?text=${text}`;
+      }
+
+      if (successCard) successCard.style.display = 'block';
+
+      showToast(`Site visit request confirmed for ${name}!`);
+      if (submitBtn) submitBtn.textContent = 'Confirm Site Visit Request →';
+    }, 500);
+
+    // Allow browser native POST to hidden_iframe to complete without reloading page
+    return true;
   }
 
   function showToast(message) {
